@@ -52,8 +52,7 @@ for gi = 1:length(gamma_values)
     theta = atan2(2*gamma, 2*Delta + kmod^2 + 1);
 
     % Floquet parameter mu sweeps one Brillouin zone [0, 2*pi/L)
-    mu_vals = linspace(0, 2*pi/L, Nmu+1);
-    mu_vals(end) = [];
+    mu_vals = linspace(0, (2*pi/L)*(Nmu-1)/Nmu, Nmu);
 
     % Each mu gives 2*M eigenvalues (2x2 block system, M = 2*Nmodes+1)
     M_size   = 2 * (2*Nmodes+1);
