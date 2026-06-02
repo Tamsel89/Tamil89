@@ -145,7 +145,7 @@ function lambda = MI_Hill_oval_mu(sigma, Delta, kmod, gamma, theta, ...
     A11 =  -gamma*I + sigma*sin(2*theta)*C;
     A12 =  (-sigma*cos(2*theta) + 2*sigma)*C  - 0.5*D2;
     A21 =  -Delta*I + (-sigma*cos(2*theta) - 2*sigma)*C + 0.5*D2;
-    A22 =  -gamma*I - sigma*sin(2*theta)*C;
+    A22 =  +gamma*I - sigma*sin(2*theta)*C;
 
     A = [A11, A12;
          A21, A22];
