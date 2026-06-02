@@ -19,8 +19,8 @@ kmod   = 0.7;
 gamma_values = [0.2, 0.3225, 0.5];
 
 % Numerical resolution
-Nmodes = 60;   % truncation order for Hill matrix
-Nmu    = 400;  % number of Floquet samples
+Nmodes = 60;    % truncation order for Hill matrix
+Nmu    = 1200;  % dense Floquet sampling for closed oval loops
 
 %% Base period L = 4 K(k)
 Kk = ellipke(kmod^2);
@@ -48,7 +48,8 @@ figure('Color','w','Position',[100 250 1280 380]);
 for gi = 1:length(gamma_values)
 
     gamma = gamma_values(gi);
-    theta = atan2(2*gamma, 2*Delta + kmod^2 + 1);
+    % Paper relation uses tan(2*theta) = 2*gamma / (2*Delta + k^2 + 1)
+    theta = 0.5 * atan2(2*gamma, 2*Delta + kmod^2 + 1);
 
     % Floquet parameter mu sweeps one Brillouin zone [0, 2*pi/L)
     mu_vals = linspace(0, 2*pi/L, Nmu+1);
