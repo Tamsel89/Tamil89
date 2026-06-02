@@ -54,8 +54,10 @@ for gi = 1:length(gamma_values)
     mu_vals = linspace(0, 2*pi/L, Nmu+1);
     mu_vals(end) = [];
 
-    spec_all = zeros(Nmu * (2*(2*Nmodes+1)), 1);
-    idx0 = 0;
+    % Each mu gives 2*M eigenvalues (2x2 block system, M = 2*Nmodes+1)
+    M_size   = 2 * (2*Nmodes+1);
+    spec_all = zeros(Nmu * M_size, 1);
+    idx0     = 0;
 
     for im = 1:length(mu_vals)
         mu  = mu_vals(im);
@@ -68,9 +70,10 @@ for gi = 1:length(gamma_values)
 
     spec_all = spec_all(1:idx0);
 
-    % Keep only points inside the plot window (with a small margin)
-    mask = real(spec_all) >= XLim(1)-0.05 & real(spec_all) <= XLim(2)+0.05 & ...
-           imag(spec_all) >= YLim(1)-0.05 & imag(spec_all) <= YLim(2)+0.05;
+    % Keep only points inside the plot window (small margin for boundary eigenvalues)
+    plot_margin = 0.05;
+    mask = real(spec_all) >= XLim(1)-plot_margin & real(spec_all) <= XLim(2)+plot_margin & ...
+           imag(spec_all) >= YLim(1)-plot_margin & imag(spec_all) <= YLim(2)+plot_margin;
     spec_plot = spec_all(mask);
 
     subplot(1,3,gi); hold on; box on;
@@ -110,14 +113,25 @@ function lambda = MI_Hill_oval_mu(sigma, Delta, kmod, gamma, theta, ...
     M  = length(j);                    % = 2*Nmodes + 1
 
     % ---- Convolution matrix C for multiplication by psi^2 ----
-    % C(a,b) = c_{j(a)-j(b)},  Fourier coeff of psi^2
+    % C(a,b) = c_{j(a)-j(b)},  Fourier coefficient of psi^2.
+    % Build a map from harmonic index n to position in nfull for O(M^2) lookup.
+    n_min   = nfull(1);
+    n_max   = nfull(end);
+    n_range = n_max - n_min + 1;
+    idx_map = zeros(1, n_range);   % idx_map(n - n_min + 1) = position in c_raw
+    for ii = 1:length(nfull)
+        idx_map(nfull(ii) - n_min + 1) = ii;
+    end
+
     C = zeros(M, M);
     for a = 1:M
         for b = 1:M
-            n   = j(a) - j(b);
-            idx = find(nfull == n, 1);
-            if ~isempty(idx)
-                C(a,b) = c_raw(idx);
+            n = j(a) - j(b);
+            if n >= n_min && n <= n_max
+                pos = idx_map(n - n_min + 1);
+                if pos > 0
+                    C(a,b) = c_raw(pos);
+                end
             end
         end
     end
