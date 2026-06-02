@@ -61,7 +61,7 @@ for gi = 1:length(gamma_values)
 
     for im = 1:length(mu_vals)
         mu  = mu_vals(im);
-        lam = MI_Hill_oval_mu(sigma, Delta, kmod, gamma, theta, ...
+        lam = compute_hill_spectrum_mu(sigma, Delta, kmod, gamma, theta, ...
                               L, Nmodes, mu, c_raw, nfull);
         n = length(lam);
         spec_all(idx0+1 : idx0+n) = lam;
@@ -106,7 +106,7 @@ end
 %% ============================================================
 %  Local function: Floquet-Hill spectrum at a single mu
 %% ============================================================
-function lambda = MI_Hill_oval_mu(sigma, Delta, kmod, gamma, theta, ...
+function lambda = compute_hill_spectrum_mu(sigma, Delta, kmod, gamma, theta, ...
                                    L, Nmodes, mu, c_raw, nfull)
     % Hill basis index vector
     j  = (-Nmodes : Nmodes).';
