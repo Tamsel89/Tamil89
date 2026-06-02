@@ -1,0 +1,140 @@
+clear; clc; close all;
+
+set(0,'defaultAxesFontSize',18);
+set(0,'defaultLineLineWidth',1.4);
+
+%% ============================================================
+%  Floquet-Fourier-Hill code for oval spectral curves
+%  Paper parameters:
+%     sigma = +1, Delta = -2, k = 0.7
+%  Figure 3 panels:
+%     gamma = 0.2, 0.3225, 0.5
+%% ============================================================
+
+%% Parameters
+sigma  = +1;
+Delta  = -2;
+kmod   = 0.7;
+
+gamma_values = [0.2, 0.3225, 0.5];
+
+% Numerical resolution
+Nmodes = 60;   % truncation order for Hill matrix
+Nmu    = 400;  % number of Floquet samples
+
+%% Base period L = 4 K(k)
+Kk = ellipke(kmod^2);
+L  = 4*Kk;
+
+%% Plot limits
+XLim = [-1 1];
+YLim = [-3 3];
+
+%% Precompute Fourier coefficients of psi^2 = k^2 sn^2(x,k)
+Nx = 4096;
+x  = linspace(0, L, Nx+1); x(end) = [];
+[sn,~,~] = ellipj(x, kmod^2);
+psi2 = (kmod*sn).^2;
+
+% FFT on base period L:  psi2(x) = sum_n c_n exp(i 2*pi*n*x/L)
+c_raw  = fftshift(fft(psi2)) / Nx;
+nfull  = (-floor(Nx/2)) : (ceil(Nx/2)-1);
+
+%% ============================================================
+%  Figure
+%% ============================================================
+figure('Color','w','Position',[100 250 1280 380]);
+
+for gi = 1:length(gamma_values)
+
+    gamma = gamma_values(gi);
+    theta = atan2(2*gamma, 2*Delta + kmod^2 + 1);
+
+    % Floquet parameter mu sweeps one Brillouin zone [0, 2*pi/L)
+    mu_vals = linspace(0, 2*pi/L, Nmu+1);
+    mu_vals(end) = [];
+
+    spec_all = zeros(Nmu * (2*(2*Nmodes+1)), 1);
+    idx0 = 0;
+
+    for im = 1:length(mu_vals)
+        mu  = mu_vals(im);
+        lam = MI_Hill_oval_mu(sigma, Delta, kmod, gamma, theta, ...
+                              L, Nmodes, mu, c_raw, nfull);
+        n = length(lam);
+        spec_all(idx0+1 : idx0+n) = lam;
+        idx0 = idx0 + n;
+    end
+
+    spec_all = spec_all(1:idx0);
+
+    % Keep only points inside the plot window (with a small margin)
+    mask = real(spec_all) >= XLim(1)-0.05 & real(spec_all) <= XLim(2)+0.05 & ...
+           imag(spec_all) >= YLim(1)-0.05 & imag(spec_all) <= YLim(2)+0.05;
+    spec_plot = spec_all(mask);
+
+    subplot(1,3,gi); hold on; box on;
+
+    plot(real(spec_plot), imag(spec_plot), 'k.', 'MarkerSize', 2.5);
+    h0 = plot([0 0], YLim, 'r--', 'LineWidth', 1.3);
+
+    legend(h0, 'Re(\lambda) = 0', ...
+        'Interpreter', 'tex', ...
+        'Location',    'northeast', ...
+        'FontSize',    11);
+
+    xlabel('Re(\lambda)', 'Interpreter', 'tex', 'FontSize', 30);
+    ylabel('Im(\lambda)', 'Interpreter', 'tex', 'FontSize', 30);
+
+    xlim(XLim);
+    ylim(YLim);
+    xticks([-1 0 1]);
+    yticks([-2 0 2]);
+
+    set(gca, 'FontSize', 24, 'LineWidth', 1.0, 'TickDir', 'out');
+    grid off;
+
+    title(sprintf('\\gamma = %.4f', gamma), 'FontSize', 16);
+
+    fprintf('gamma = %.4f,  max Re(lambda) = %.8f\n', ...
+        gamma, max(real(spec_plot)));
+end
+
+%% ============================================================
+%  Local function: Floquet-Hill spectrum at a single mu
+%% ============================================================
+function lambda = MI_Hill_oval_mu(sigma, Delta, kmod, gamma, theta, ...
+                                   L, Nmodes, mu, c_raw, nfull)
+    % Hill basis index vector
+    j  = (-Nmodes : Nmodes).';
+    M  = length(j);                    % = 2*Nmodes + 1
+
+    % ---- Convolution matrix C for multiplication by psi^2 ----
+    % C(a,b) = c_{j(a)-j(b)},  Fourier coeff of psi^2
+    C = zeros(M, M);
+    for a = 1:M
+        for b = 1:M
+            n   = j(a) - j(b);
+            idx = find(nfull == n, 1);
+            if ~isempty(idx)
+                C(a,b) = c_raw(idx);
+            end
+        end
+    end
+
+    % ---- Floquet-shifted wavenumbers ----
+    q  = mu + 2*pi*j / L;
+    D2 = diag(-(q.^2));
+    I  = eye(M);
+
+    % ---- Matrix blocks (from paper) ----
+    A11 =  -gamma*I + sigma*sin(2*theta)*C;
+    A12 =  (-sigma*cos(2*theta) + 2*sigma)*C  - 0.5*D2;
+    A21 =  -Delta*I + (-sigma*cos(2*theta) - 2*sigma)*C + 0.5*D2;
+    A22 =  -gamma*I - sigma*sin(2*theta)*C;
+
+    A = [A11, A12;
+         A21, A22];
+
+    lambda = eig(A);
+end
